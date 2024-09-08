@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Login to Kichat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-[#1b1717] text-white">
+    <div class="container space-y-2 p-5 text-white">
+      <div class="mb-2 text-center text-xl font-bold uppercase">Kichat chat client login</div>
+      <div>Please ensure that the Kichat extension is installed and that you are logged into your Kick.com account.</div>
+      <ol class="list-decimal p-3 px-8">
+        <li>Add the Kichat Connect extension to your browser.</li>
+        <li>Run the Kichat Connect extension on kick.com to connect your account with Kichat.</li>
+      </ol>
+      <!-- <div>Alternative login method</div>
+      <ol class="list-decimal p-3 px-8">
+        <li>Open the kick.com website.</li>
+        <li>Open developer tools (F12).</li>
+        <li>Paste this code in the console section (note: the response of this command is unique to you. Do not share it with anyone): <code>document.cookie</code></li>
+      </ol> -->
+    </div>
+    <script>
+      const checkCookies = async () => {
+          try {
+              const response = await fetch('http://localhost:53340/login/cookie');
+              if (response.ok) {
+                  const data = await response.json();
+                  if (data.cookies) {
+                      window.location.href = 'main.html';
+                  }
+              }
+          } catch (error) {
+              console.error('Error checking cookies:', error);
+          }
+      };
+
+      setInterval(checkCookies, 3000); // Check every 3 seconds
+    </script>
+  </body>
+</html>
