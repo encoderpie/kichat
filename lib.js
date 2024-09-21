@@ -1,32 +1,34 @@
 import { runtimeChannelData } from './utils.js'
 
-export const messageParser = (data) => {
-  const chatroom_id = data.chatroom_id
-  const channel_name = runtimeChannelData.get(chatroom_id)
+export const messageParser = (channel_name, chatroomId, data) => {
+  console.log('MESSAGE PARSER DATA', data)
   const badges = data.sender.identity.badges
 
-  //console.log('MESSAGE RETURN', { ...data, channel_name, badges })
   return { ...data, channel_name, badges }
 }
 
 export const oldMessageParser = (data, channel_name) => {
   const badges = data.sender.identity.badges
 
-  //console.log('MESSAGE RETURN', { ...data, channel_name, badges })
   return { ...data, channel_name, badges, type: 'old-message' }
 }
 
-export const messageDeletedParser = (rawData) => {
-  const chatroom_id = parseInt(rawData.channel.split('.')[1])
-  const channel_name = runtimeChannelData.get(chatroom_id)
-  const message_data = JSON.parse(rawData.data)
+export const messageDeletedParser = (channel_name, chatroomId, data) => {
+  console.log('MESSAGE DELETED DATA', data)
   
-  return { ...rawData, data: message_data, channel_name }
+  return { ...data, channel_name }
 }
 
-export const userBannedParser = (message) => {
-
+export const userBannedParser = (channel_name, chatroomId, data) => {
+  console.log('USER BANNED DATA', data)
+  return { ...data, channel_name }
 }
+
+export const userUnbannedParser = (channel_name, chatroomId, data) => {
+  console.log('USER UNBANNED DATA', data)
+  return { ...data, channel_name }
+}
+
 // other message parsers...
 
 export const logMessage = (data) => {

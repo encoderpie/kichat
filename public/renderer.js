@@ -238,11 +238,11 @@ ipcRenderer.on('server-message', (event, message) => {
     }
 })
 
-ipcRenderer.on('message-deleted', (event, message) => {
-    console.log('MESSAGE DELETED', message);
-    const channelChatDiv = document.getElementById(`chat-${message.channel_name}`)
+ipcRenderer.on('message-deleted', (event, data) => {
+    console.log('MESSAGE DELETED', data);
+    const channelChatDiv = document.getElementById(`chat-${data.channel_name}`)
     if (channelChatDiv) {
-        const messageDiv = channelChatDiv.querySelector(`div[data-message-id="${message.data.message.id}"]`)
+        const messageDiv = channelChatDiv.querySelector(`div[data-message-id="${data.message.id}"]`)
 
         if (messageDiv) {
             messageDiv.classList.add('!opacity-40')
@@ -254,6 +254,60 @@ ipcRenderer.on('message-deleted', (event, message) => {
             messageContainerDiv.appendChild(deletedText)
         }
 
+        // Check the number of messages and delete old messages if necessary
+        removeOldMessages(channelChatDiv)
+
+        const autoScroll = channelChatDiv.getAttribute('data-auto-scroll') === 'true'
+        const scrollDownButton = channelChatDiv.querySelector('.scroll-down-button')
+
+        if (autoScroll) {
+            channelChatDiv.scrollTop = channelChatDiv.scrollHeight // go to bottom
+            hideScrollDownButton(scrollDownButton)
+        } else {
+            showScrollDownButton(scrollDownButton)
+        }
+    }
+})
+
+ipcRenderer.on('user-banned', (event, data) => {
+    console.log('USER BANNED', data);
+    const channelChatDiv = document.getElementById(`chat-${data.channel_name}`)
+    if (channelChatDiv) {
+        const messageElement = document.createElement('div')
+        if (data.permanent) {
+            messageElement.textContent = `${data.banned_by.username} has permanently banned ${data.user.slug}`
+        } else {
+            messageElement.textContent = `${data.banned_by.username} has timed out ${data.user.slug} from chat. Timeout duration: ${data.duration} minute(s)`
+        }
+
+        messageElement.className = 'p-1'
+        channelChatDiv.appendChild(messageElement)
+        
+        // Check the number of messages and delete old messages if necessary
+        removeOldMessages(channelChatDiv)
+
+        const autoScroll = channelChatDiv.getAttribute('data-auto-scroll') === 'true'
+        const scrollDownButton = channelChatDiv.querySelector('.scroll-down-button')
+
+        if (autoScroll) {
+            channelChatDiv.scrollTop = channelChatDiv.scrollHeight // go to bottom
+            hideScrollDownButton(scrollDownButton)
+        } else {
+            showScrollDownButton(scrollDownButton)
+        }
+    }
+})
+
+ipcRenderer.on('user-unbanned', (event, data) => {
+    console.log('USER UNBANNED', data);
+    const channelChatDiv = document.getElementById(`chat-${data.channel_name}`)
+    if (channelChatDiv) {
+        const messageElement = document.createElement('div')
+        messageElement.textContent = `${data.unbanned_by.username} has unbanned ${data.user.slug}`
+
+        messageElement.className = 'p-1'
+        channelChatDiv.appendChild(messageElement)
+        
         // Check the number of messages and delete old messages if necessary
         removeOldMessages(channelChatDiv)
 

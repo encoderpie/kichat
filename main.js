@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url'
 import bodyParser from 'body-parser'
 import cors from 'cors'
 import axios from 'axios'
-import { messageParser, messageDeletedParser, oldMessageParser } from './lib.js'
+import { messageParser, messageDeletedParser, oldMessageParser, userBannedParser, userUnbannedParser } from './lib.js'
 import { getChatroomId, getChannelData, getChannelEmotes, getChannel7TVEmotes, getOldMessagesOfChannel } from './utils.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -123,7 +123,7 @@ const createMainWindow = () => {
         return { action: 'deny' }
     })
 
-    Menu.setApplicationMenu(null)
+    //Menu.setApplicationMenu(null)
 }
 
 app.disableHardwareAcceleration()
@@ -214,11 +214,17 @@ const connectToChannels = async (channels) => {
                 console.log('Event Data:', data)
 
                 if (eventName === 'App\\Events\\ChatMessageEvent') {
-                    const parsedMessage = messageParser(data)
+                    const parsedMessage = messageParser(channel, chatroomId, data)
                     mainWindow.webContents.send('message', parsedMessage)
                 } else if (eventName === 'App\\Events\\MessageDeletedEvent') {
-                    const parsedData = messageDeletedParser(data)
+                    const parsedData = messageDeletedParser(channel, chatroomId, data)
                     mainWindow.webContents.send('message-deleted', parsedData)
+                } else if (eventName === 'App\\Events\\UserBannedEvent') {
+                    const parsedData = userBannedParser(channel, chatroomId, data)
+                    mainWindow.webContents.send('user-banned', parsedData)
+                } else if (eventName === 'App\\Events\\UserUnbannedEvent') {
+                    const parsedData = userUnbannedParser(channel, chatroomId, data)
+                    mainWindow.webContents.send('user-unbanned', parsedData)
                 }
             })
 
