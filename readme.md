@@ -28,17 +28,17 @@ Kichat is an open-source chat client for kick.com. Developed using Electron, it 
 
 ## Usage
 
-To start the application:
+To start the application: `npm start`
 
 ## Development
 
-For linting:
+For linting: `npm run lint`
 
-To format the code:
+To format the code: `npm run format`
 
 ## Distribution
 
-To package and distribute the application:
+To package and distribute the application: `npm run build`
 
 This command will create distribution-ready files in the `dist` folder.
 
