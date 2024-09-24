@@ -1,289 +1,89 @@
-import { app, BrowserWindow, ipcMain, Menu, shell, session } from 'electron'
-import path from 'path'
-import express from 'express'
-import Pusher from 'pusher-js'
-import Store from 'electron-store'
-import { fileURLToPath } from 'url'
-import bodyParser from 'body-parser'
-import cors from 'cors'
-import axios from 'axios'
-import { messageParser, messageDeletedParser, oldMessageParser, userBannedParser, userUnbannedParser } from './lib.js'
-import { getChatroomId, getChannelData, getChannelEmotes, getChannel7TVEmotes, getOldMessagesOfChannel } from './utils.js'
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import Store from 'electron-store';
+import { setupExpressServer } from './server/expressServer.js';
+import { createLoginWindow, createMainWindow } from './windows/windowCreation.js';
+import { setupIpcHandlers } from './ipc/ipcHandlers.js';
+import { connectToChannels, disconnectFromChannel, sendMessageToChannel } from './channels/channelOperations.js';
+import { setupPusher } from './pusher/pusherSetup.js';
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const store = new Store()
-const expressApp = express()
-const port = 53340
+const store = new Store();
 
-expressApp.use(bodyParser.json())
-expressApp.use(cors())
+let mainWindow;
+let loginWindow;
+let isQuitting = false;
 
-expressApp.use(express.static(path.join(__dirname, 'public')))
+const server = setupExpressServer(store, app, createMainWindow, loginWindow);
 
-function getSessionToken(cookieString) {
-    const cookies = cookieString.split('; ')
-    for (let cookie of cookies) {
-        if (cookie.startsWith('session_token=')) {
-            return decodeURIComponent(cookie.split('=')[1])
+app.disableHardwareAcceleration();
+
+setupErrorHandling();
+
+app.whenReady().then(initializeApp);
+
+app.on('activate', handleActivate);
+app.on('before-quit', handleBeforeQuit);
+app.on('window-all-closed', handleWindowAllClosed);
+app.on('will-quit', handleWillQuit);
+
+ipcMain.on('app-closed', () => app.exit(0));
+
+function setupErrorHandling() {
+    process.on('uncaughtException', (error) => {
+        console.error('Uncaught Exception:', error);
+        if (!isQuitting) {
+            app.quit();
         }
-    }
-    return null // Return null if session_token is not found
+    });
 }
 
-expressApp.post('/login/cookies', (req, res) => {
-    console.log('LOGIN Received cookies:', req.body)
-    const { cookies } = req.body
-    const session_token = getSessionToken(cookies)
-    console.log('Received cookies:', cookies, 'and session token:', session_token)
-
-    if (cookies && session_token) {
-        store.set("cookies", cookies)
-        store.set("session_token", session_token)
-        res.send("Your Kick account has been successfully connected to Kichat. You can now open Kichat.")
-        console.log("Cookies stored.", cookies, session_token)
-        if (mainWindow) {
-          app.relaunch()
-          app.exit()
-        } else if (loginWindow) {
-          loginWindow.close()
-          createMainWindow()
-        }
-    } else {
-        res.status(400).send("No cookies provided.")
-        console.log("No cookies provided.")
-    }
-})
-
-const server = expressApp.listen(port, () => {
-    console.log(`Express app listening at http://localhost:${port}`)
-})
-
-let mainWindow
-let loginWindow
-
-const createLoginWindow = () => {
-    loginWindow = new BrowserWindow({
-        width: 600,
-        height: 300,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: true,
-            contextIsolation: false
-        },
-        icon: path.join(__dirname, 'resources', 'kichat.ico')
-    })
-
-    loginWindow.loadFile('login.html')
-
-    loginWindow.on('closed', () => {
-        loginWindow = null
-    })
-
-    Menu.setApplicationMenu(null)
-}
-
-const createMainWindow = () => {
-    mainWindow = new BrowserWindow({
-        width: 700,
-        height: 800,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: true,
-            contextIsolation: false
-        },
-        icon: path.join(__dirname, 'resources', 'kichat.ico')
-    })
-
-    mainWindow.loadURL(`http://localhost:${port}`)
-
-    ipcMain.on('connect-channels', async (event, channels) => {
-        const newChannels = channels.filter(channel => !Array.from(activeChannels.values()).some(ch => ch.channelName === channel))
-        if (newChannels.length > 0) {
-            const chatroomIds = await getChatroomId(newChannels)
-            const channelPairs = newChannels.map((channel, index) => [channel, chatroomIds[index]])
-            connectToChannels(channelPairs)
-        } else {
-            console.log('All channels are already connected.')
-        }
-    })
-
-    ipcMain.on('disconnect-channel', (event, channel) => {
-        disconnectFromChannel(channel)
-    })
-
-    ipcMain.on('send-message', async (event, { message, channelData }) => {
-        console.log('IPC SEND MESSAGE:', message) //, channelData)
-        await sendMessageToChannel(message, channelData)
-    })
-
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url)
-        return { action: 'deny' }
-    })
-
-    //Menu.setApplicationMenu(null)
-}
-
-app.disableHardwareAcceleration()
-app.whenReady().then(() => {
-    /*  user rights :) */
-    const user_cookies = store.get('cookies')
-    const user_session_token = store.get('session_token')
-    console.log('User Session Token:', user_session_token)
-    console.log('User Cookies:', user_cookies)
-    
-    const cookies = store.get('cookies')
+function initializeApp() {
+    const cookies = store.get('cookies');
     if (!cookies) {
-        createLoginWindow()
+        loginWindow = createLoginWindow();
     } else {
-        createMainWindow()
+        mainWindow = createMainWindow();
     }
 
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            const cookies = store.get('cookies')
-            if (!cookies) {
-                createLoginWindow()
-            } else {
-                createMainWindow()
-            }
-        }
-    })
-})
+    const pusher = setupPusher(mainWindow);
+    setupIpcHandlers(ipcMain, mainWindow, connectToChannels, disconnectFromChannel, sendMessageToChannel, pusher);
+}
 
-app.on('window-all-closed', () => {
+function handleActivate() {
+    if (BrowserWindow.getAllWindows().length === 0) {
+        const cookies = store.get('cookies');
+        if (!cookies) {
+            loginWindow = createLoginWindow();
+        } else {
+            mainWindow = createMainWindow();
+        }
+    }
+}
+
+function handleBeforeQuit(event) {
+    if (!isQuitting) {
+        event.preventDefault();
+        isQuitting = true;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('app-closing');
+        } else {
+            app.quit();
+        }
+    }
+}
+
+function handleWindowAllClosed() {
     if (process.platform !== 'darwin') {
-        app.quit()
-    }
-})
-
-app.on('close', () => {
-    mainWindow = null
-})
-
-app.on('closed', () => {
-    mainWindow = null
-})
-
-// Pusher
-const pusher = new Pusher('32cbd69e4b950bf97679', {
-    cluster: 'us2',
-    useTLS: true
-})
-
-let activeChannels = new Map()
-
-const connectToChannels = async (channels) => {
-    for (const [channel, chatroomId] of channels) {
-        if (activeChannels.has(chatroomId)) {
-            console.log(`Already connected to channel #${channel} (${chatroomId})`)
-        } else {
-            let channelData = await getChannelData(channel)
-            const channelEmotes = await getChannelEmotes(channel)
-            const channel7TVEmotes = await getChannel7TVEmotes(channelData.user_id)
-            const getOldMessages = await getOldMessagesOfChannel(channelData.id)
-            //console.log('notparsed data',channelData,channelEmotes)
-            channelData.chatroom.emotes = channelEmotes
-            channelData.chatroom.emotes7tv = channel7TVEmotes
-            //console.log('parsed data',channelData)
-            mainWindow.webContents.send('server-message', { channel, status: 'connecting', channelData })
-
-            console.log(getOldMessages)
-            // sort messages by date
-            const sortedMessages = getOldMessages.data.messages.sort((a, b) => {
-              return new Date(a.created_at) - new Date(b.created_at)
-            })
-            
-            // send sorted messages
-            sortedMessages.forEach(message => {
-              const parsedMessage = oldMessageParser(message, channel)
-              console.log(message, parsedMessage)
-              mainWindow.webContents.send('message', parsedMessage)
-            })
-
-            mainWindow.webContents.send('server-message', { channel, status: 'connected' })
-
-            // Pusher kanalına abone ol
-            const pusherChannel = pusher.subscribe(`chatrooms.${chatroomId}.v2`)
-            
-            // Eventleri dinle
-            pusherChannel.bind_global((eventName, data) => {
-                console.log('Event Name:', eventName)
-                console.log('Event Data:', data)
-
-                if (eventName === 'App\\Events\\ChatMessageEvent') {
-                    const parsedMessage = messageParser(channel, chatroomId, data)
-                    mainWindow.webContents.send('message', parsedMessage)
-                } else if (eventName === 'App\\Events\\MessageDeletedEvent') {
-                    const parsedData = messageDeletedParser(channel, chatroomId, data)
-                    mainWindow.webContents.send('message-deleted', parsedData)
-                } else if (eventName === 'App\\Events\\UserBannedEvent') {
-                    const parsedData = userBannedParser(channel, chatroomId, data)
-                    mainWindow.webContents.send('user-banned', parsedData)
-                } else if (eventName === 'App\\Events\\UserUnbannedEvent') {
-                    const parsedData = userUnbannedParser(channel, chatroomId, data)
-                    mainWindow.webContents.send('user-unbanned', parsedData)
-                }
-            })
-
-            console.log(`Connected to #${channel} (${chatroomId})`)
-            activeChannels.set(chatroomId, { pusherChannel, channelName: channel })
-        }
+        app.quit();
     }
 }
 
-
-const disconnectFromChannel = async (channel) => {
-    const chatroomId = await getChatroomId([channel])
-    if (chatroomId[0]) {
-        const channelData = activeChannels.get(chatroomId[0])
-        if (channelData) {
-            const { pusherChannel, channelName } = channelData
-            pusherChannel.unsubscribe()
-            console.log(`Disconnected from channel #${channelName} (${chatroomId[0]})`)
-            activeChannels.delete(chatroomId[0])
-        } else {
-            console.log(`Socket for channel ${channel} not found`)
-        }
-    } else {
-        console.log(`Channel ID for ${channel} not found`)
-    }
-}
-
-const sendMessageToChannel = async (messageContent, channelData) => {
-    const user_cookies = store.get('cookies')
-    const user_session_token = store.get('session_token')
-    /* console.log('User Session Token:', user_session_token)
-    console.log('User Cookies:', user_cookies)
-    console.log('Channel ID:', channelData?.id)
-    console.log('Message Content:', messageContent) */
-    if (channelData?.id) {
-        const axiosRequest = await axios.post(
-            `https://kick.com/api/v2/messages/send/${channelData.chatroom.id}`,
-            {
-                content: messageContent,
-                type: "message",
-            },
-            {
-            headers: {
-                accept: "application/json, text/plain, */*",
-                authorization: `Bearer ${user_session_token}`,
-                "content-type": "application/json",
-                "x-xsrf-token": user_session_token,
-                cookie: user_cookies,
-                Referer: `https://kick.com/${channelData.slug}`,
-            },
-            }
-        )
-        //console.log(axiosRequest, axiosRequest?.data)
-        if (axiosRequest.status === 200) {
-            console.log(`Message sent successfully -> ${channelData.slug}: ${messageContent}`)
-        } else {
-            console.log(`An error occurred while sending the message -> status_code: ${axiosRequest.status} - ${axiosRequest.statusText} CHANNEL: ${channelData.slug} MESSAGE: ${messageContent}`)
-        }
-    } else {
-        console.log(`Channel ID for ${channelData.slug} not found`)
+function handleWillQuit() {
+    if (server) {
+        server.close();
     }
 }

@@ -1,4 +1,14 @@
 const { ipcRenderer } = require('electron')
+
+// Stil değişkenleri
+const FONT_SIZE = '14px'
+const EMOTE_SIZE = '26px'
+const BADGE_SIZE = '16px'
+const USERNAME_FONT_SIZE = '14px'
+const TIMESTAMP_FONT_SIZE = '12px'
+const MAX_MESSAGES = 500
+
+// Diğer değişkenler ve DOM elementleri
 const chatsDiv = document.getElementById('chats')
 const tabsDiv = document.getElementById('tabs')
 const addChannelButton = document.getElementById('addChannelButton')
@@ -6,13 +16,10 @@ const channelModal = document.getElementById('channelModal')
 const modalChannelInput = document.getElementById('modalChannelInput')
 const modalAddChannelButton = document.getElementById('modalAddChannelButton')
 
-const defaultChannels = [] // ['encoderpie', 'flundar']
 const existingChannels = new Map()
-const MAX_MESSAGES = 500
-
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Home tab events
+    // Ana sayfa sekmesi olayları
     const homeTabButton = document.getElementById('homeTabButton')
     const homeTabTextButton = document.getElementById('tab-home')
     
@@ -29,12 +36,51 @@ document.addEventListener('DOMContentLoaded', () => {
         homeTabTextButton.classList.remove('opacity-100')
     })
 
-    defaultChannels.forEach(channel => {
+    // Kaydedilmiş kanalları yükle
+    ipcRenderer.send('load-channels')
+})
+
+ipcRenderer.on('channels-loaded', (event, channels) => {
+    channels.forEach(channel => {
         createChannelTab(channel)
     })
-
-    ipcRenderer.send('connect-channels', defaultChannels)
+    ipcRenderer.send('connect-channels', channels)
 })
+
+function createBadgeHTML(badge, channelSubscriberBadges) {
+    const badgeHTML = (svg) => `<span style="width: ${BADGE_SIZE}; height: ${BADGE_SIZE};">${svg}</span>`;
+    
+    switch (badge.type) {
+        case 'subscriber':
+            const count = badge.count;
+            let matchingBadge = channelSubscriberBadges
+                .filter(b => b.months <= count)
+                .sort((a, b) => b.months - a.months)[0];
+
+            if (matchingBadge) {
+                const badgeInfo = `${count} Aylık Abone`;
+                return badgeHTML(`<img src="${matchingBadge.badge_image.src}" style="width: ${BADGE_SIZE};" alt="${badgeInfo}" title="${badgeInfo}" />`);
+            }
+            return '';
+        case 'moderator':
+            return badgeHTML(`<svg version="1.1" x="0px" y="0px" viewBox="0 0 16 16" title="Moderatör" xml:space="preserve" width="${BADGE_SIZE}" height="${BADGE_SIZE}"><path d="M11.7,1.3v1.5h-1.5v1.5H8.7v1.5H7.3v1.5H5.8V5.8h-3v3h1.5v1.5H2.8v1.5H1.3v3h3v-1.5h1.5v-1.5h1.5v1.5h3v-3H8.7V8.7h1.5V7.3h1.5V5.8h1.5V4.3h1.5v-3C14.7,1.3,11.7,1.3,11.7,1.3z" style="fill: rgb(0, 199, 255);"></path></svg>`);
+        case 'founder':
+            return `<svg version="1.1" x="0px" y="0px" viewBox="0 0 16 16" title="Kurucu" xml:space="preserve" width="${BADGE_SIZE}" height="${BADGE_SIZE}"><linearGradient id="badge-founder-gradient" gradientUnits="userSpaceOnUse" x1="7.874" y1="20.2333" x2="8.1274" y2="-0.3467" gradientTransform="matrix(1 0 0 -1 0 18)"><stop offset="0" style="stop-color: rgb(255, 201, 0);"></stop><stop offset="0.99" style="stop-color: rgb(255, 149, 0);"></stop></linearGradient><path d="M14.6,4V2.7h-1.3V1.4H12V0H4v1.4H2.7v1.3H1.3V4H0v8h1.3v1.3h1.4v1.3H4V16h8v-1.4h1.3v-1.3h1.3V12H16V4H14.6z M9.9,12.9H6.7V6.4H4.5V5.2h1V4.1h1v-1h3.4V12.9z" style="fill-rule: evenodd; clip-rule: evenodd; fill: #ffad00;"></path></svg>`;
+        case 'vip':
+            return `<svg version="1.1" x="0px" y="0px" viewBox="0 0 16 16" xml:space="preserve" width="${BADGE_SIZE}" height="${BADGE_SIZE}"><linearGradient id="badge-vip-gradient" gradientUnits="userSpaceOnUse" x1="8" y1="-163.4867" x2="8" y2="-181.56" gradientTransform="matrix(1 0 0 -1 0 -164)"><stop offset="0" style="stop-color: rgb(255, 201, 0);"></stop><stop offset="0.99" style="stop-color: rgb(255, 149, 0);"></stop></linearGradient><path d="M13.9,2.4v1.1h-1.2v2.3h-1.1v1.1h-1.1V4.6H9.3V1.3H6.7v3.3H5.6v2.3H4.4V5.8H3.3V3.5H2.1V2.4H0v12.3h16V2.4H13.9z" style="fill: #ffad00;"></path></svg>`;
+        case 'verified':
+            return `<svg data-v-e4d376bf="" width="${BADGE_SIZE}" height="${BADGE_SIZE}" title="Doğrulanmış" viewBox="0 0 16 16" style="color: rgb(83 252 24);" class="fill-current text-primary" xmlns="http://www.w3.org/2000/svg"><path d="M16 6.83512L13.735 4.93512L13.22 2.02512H10.265L8 0.120117L5.735 2.02012H2.78L2.265 4.93012L0 6.83512L1.48 9.39512L0.965 12.3051L3.745 13.3151L5.225 15.8751L8.005 14.8651L10.785 15.8751L12.265 13.3151L15.045 12.3051L14.53 9.39512L16.01 6.83512H16ZM6.495 12.4051L2.79 8.69512L4.205 7.28012L6.495 9.57512L11.29 4.78012L12.705 6.19512L6.5 12.4001L6.495 12.4051Z"></path></svg>`;
+        case 'og':
+            return `<svg version="1.1" x="0px" y="0px" title="OG" viewBox="0 0 16 16" xml:space="preserve" width="${BADGE_SIZE}" height="${BADGE_SIZE}"><g><linearGradient id="badge-og-gradient-1" gradientUnits="userSpaceOnUse" x1="12.2" y1="-180" x2="12.2" y2="-165.2556" gradientTransform="matrix(1 0 0 -1 0 -164)"><stop offset="0" style="stop-color:#00FFF2;"></stop><stop offset="0.99" style="stop-color:#006399;"></stop></linearGradient><path style="fill:url(#badge-og-gradient-1);" d="M16,16H9.2v-0.8H8.4v-8h0.8V6.4H16v3.2h-4.5v4.8H13v-1.6h-0.8v-1.6H16V16z"></path><linearGradient id="badge-og-gradient-2" gradientUnits="userSpaceOnUse" x1="3.7636" y1="-164.265" x2="4.0623" y2="-179.9352" gradientTransform="matrix(1 0 0 -1 0 -164)"><stop offset="0" style="stop-color:#00FFF2;"></stop><stop offset="0.99" style="stop-color:#006399;"></stop></linearGradient><path style="fill:url(#badge-og-gradient-2);" d="M6.8,8.8v0.8h-6V8.8H0v-8h0.8V0h6.1v0.8h0.8v8H6.8z M4.5,6.4V1.6H3v4.8H4.5z"></path><path style="fill:#00FFF2;" d="M6.8,15.2V16h-6v-0.8H0V8.8h0.8V8h6.1v0.8h0.8v6.4C7.7,15.2,6.8,15.2,6.8,15.2z M4.5,14.4V9.6H3v4.8C3,14.4,4.5,14.4,4.5,14.4z"></path><path style="fill:#00FFF2;" d="M16,8H9.2V7.2H8.4V0.8h0.8V0H16v1.6h-4.5v4.8H13V4.8h-0.8V3.2H16V8z"></path></g></svg>`;
+        case 'sub_gifter':
+            return `<svg width="${BADGE_SIZE}" height="${BADGE_SIZE}" title="Abone Hediye Eden" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_301_17810)"><path d="M7.99999 9.14999V6.62499L0.484985 3.35999V6.34499L1.15499 6.63499V12.73L7.99999 15.995V9.14999Z" fill="#0269D4"></path><path d="M8.00003 10.735V9.61501L1.15503 6.63501V7.70501L8.00003 10.735Z" fill="#0269D4"></path><path d="M15.515 3.355V6.345L14.85 6.64V12.73L12.705 13.755L11.185 14.48L8.00499 15.995V6.715L4.81999 5.295H4.81499L3.29499 4.61L0.484985 3.355L3.66999 1.935L3.67999 1.93L5.09499 1.3L8.00499 0L10.905 1.3L12.32 1.925L12.33 1.935L15.515 3.355Z" fill="#04D0FF"></path><path d="M14.845 6.63501V7.70501L8 10.735V9.61501L14.845 6.63501Z" fill="#0269D4"></path></g><defs><clipPath id="clip0_301_17810"><rect width="${BADGE_SIZE}" height="${BADGE_SIZE}" fill="white"></rect></clipPath></defs></svg>`;
+        case 'broadcaster':
+            return `<svg version="1.1" x="0px" y="0px" title="Yayıncı" viewBox="0 0 16 16" xml:space="preserve" width="${BADGE_SIZE}" height="${BADGE_SIZE}"><g id="Badge_Chat_host"><linearGradient id="badge-host-gradient-1" gradientUnits="userSpaceOnUse" x1="4" y1="180.5864" x2="4" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="3.2" y="9.6" style="fill:url(#badge-host-gradient-1);" width="1.6" height="1.6"></rect><linearGradient id="badge-host-gradient-2" gradientUnits="userSpaceOnUse" x1="8" y1="180.5864" x2="8" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><polygon style="fill:url(#badge-host-gradient-2);" points="6.4,9.6 9.6,9.6 9.6,8 11.2,8 11.2,1.6 9.6,1.6 9.6,0 6.4,0 6.4,1.6 4.8,1.6 4.8,8 6.4,8 	"></polygon><linearGradient id="badge-host-gradient-3" gradientUnits="userSpaceOnUse" x1="2.4" y1="180.5864" x2="2.4" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="1.6" y="6.4" style="fill:url(#badge-host-gradient-3);" width="1.6" height="3.2"></rect><linearGradient id="badge-host-gradient-4" gradientUnits="userSpaceOnUse" x1="12" y1="180.5864" x2="12" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="11.2" y="9.6" style="fill:url(#badge-host-gradient-4);" width="1.6" height="1.6"></rect><linearGradient id="badge-host-gradient-5" gradientUnits="userSpaceOnUse" x1="8" y1="180.5864" x2="8" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><polygon style="fill:url(#badge-host-gradient-5);" points="4.8,12.8 6.4,12.8 6.4,14.4 4.8,14.4 4.8,16 11.2,16 11.2,14.4 9.6,14.4 9.6,12.8 11.2,12.8 11.2,11.2 4.8,11.2 	"></polygon><linearGradient id="badge-host-gradient-6" gradientUnits="userSpaceOnUse" x1="13.6" y1="180.5864" x2="13.6" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="12.8" y="6.4" style="fill:url(#badge-host-gradient-6);" width="1.6" height="3.2"></rect></g></svg>`;
+        default:
+            return '';
+    }
+}
+
 
 ipcRenderer.on('message', (event, message) => {
     const channelChatDiv = document.getElementById(`chat-${message.channel_name}`)
@@ -43,88 +89,21 @@ ipcRenderer.on('message', (event, message) => {
         const channelData = existingChannels.get(message.channel_name)
         const channelSubscriberBadges = channelData.subscriber_badges
         const channelEmotes7tv = channelData.chatroom.emotes7tv
-        console.log("Message:", message) 
-        /* console.log("Channel Data:", channelData) 
-        console.log("channelSubscriberBadges:", channelSubscriberBadges) 
-        console.log("Message Badges:", message.badges) 
-        console.log("Message:", message) 
-        console.log("channelEmotes7tv:", channelEmotes7tv)  */
+        console.log("Mesaj:", message) 
 
         let badgesHTML = ''
         if (Array.isArray(message.badges)) {
-            for (let i = 0; i < message.badges.length; i++) {
-                if (message.badges[i].type === 'subscriber') {
-                    //console.log("Subscriber Badge:", message.badges[i])
-                    const count = message.badges[i].count
-
-                    // Kullanıcı rozet değerinden küçük veya eşit olan en büyük kanal rozet değerini bul
-                    let matchingBadge = null;
-                    for (let j = 0; j < channelSubscriberBadges.length; j++) {
-                        if (channelSubscriberBadges[j].months <= count) {
-                            if (!matchingBadge || channelSubscriberBadges[j].months > matchingBadge.months) {
-                                matchingBadge = channelSubscriberBadges[j];
-                            }
-                        }
-                    }
-
-                    if (matchingBadge) {
-                        //console.log("Matching Badge:", matchingBadge)
-                        const badgeInfo = `${count} Months Subscriber`
-                        badgesHTML += `<img src="${matchingBadge.badge_image.src}" class="w-4" alt="${badgeInfo}" title="${badgeInfo}" />`
-                    } else {
-                        //console.log("No matching badge found that is less than or equal to the subscriber count.")
-                    }
-                }
-                if (message.badges[i].type === 'moderator') {
-                    badgesHTML += `<svg version="1.1" x="0px" y="0px" viewBox="0 0 16 16" title="Moderator" xml:space="preserve" width="16" height="16"><path d="M11.7,1.3v1.5h-1.5v1.5
-                        H8.7v1.5H7.3v1.5H5.8V5.8h-3v3h1.5v1.5H2.8v1.5H1.3v3h3v-1.5h1.5v-1.5h1.5v1.5h3v-3H8.7V8.7h1.5V7.3h1.5V5.8h1.5V4.3h1.5v-3
-                        C14.7,1.3,11.7,1.3,11.7,1.3z" style="fill: rgb(0, 199, 255);"></path>
-                    </svg>`
-                }
-                if (message.badges[i].type === 'founder') {
-                    badgesHTML += `<svg version="1.1" x="0px" y="0px" viewBox="0 0 16 16" title="Founder" xml:space="preserve" width="16" height="16"><linearGradient id="badge-founder-gradient" gradientUnits="userSpaceOnUse" x1="7.874" y1="20.2333" x2="8.1274" y2="-0.3467" gradientTransform="matrix(1 0 0 -1 0 18)"><stop offset="0" style="stop-color: rgb(255, 201, 0);"></stop><stop offset="0.99" style="stop-color: rgb(255, 149, 0);"></stop></linearGradient><path d="
-                        M14.6,4V2.7h-1.3V1.4H12V0H4v1.4H2.7v1.3H1.3V4H0v8h1.3v1.3h1.4v1.3H4V16h8v-1.4h1.3v-1.3h1.3V12H16V4H14.6z M9.9,12.9H6.7V6.4H4.5
-                        V5.2h1V4.1h1v-1h3.4V12.9z" style="fill-rule: evenodd; clip-rule: evenodd; fill: #ffad00;"></path>
-                    </svg>`
-                }
-                if (message.badges[i].type === 'vip') {
-                    badgesHTML += `<svg version="1.1" x="0px" y="0px" viewBox="0 0 16 16" xml:space="preserve" width="16" height="16"><linearGradient id="badge-vip-gradient" gradientUnits="userSpaceOnUse" x1="8" y1="-163.4867" x2="8" y2="-181.56" gradientTransform="matrix(1 0 0 -1 0 -164)"><stop offset="0" style="stop-color: rgb(255, 201, 0);"></stop><stop offset="0.99" style="stop-color: rgb(255, 149, 0);"></stop></linearGradient><path d="M13.9,2.4v1.1h-1.2v2.3
-                        h-1.1v1.1h-1.1V4.6H9.3V1.3H6.7v3.3H5.6v2.3H4.4V5.8H3.3V3.5H2.1V2.4H0v12.3h16V2.4H13.9z" style="fill: #ffad00;"></path>
-                    </svg>`
-                }
-                if (message.badges[i].type === 'verified') {
-                    badgesHTML += `<svg data-v-e4d376bf="" width="16" height="16" title="Verified" viewBox="0 0 16 16" style="color: rgb(83 252 24);" class="fill-current text-primary" xmlns="http://www.w3.org/2000/svg"><path d="M16 6.83512L13.735 4.93512L13.22 2.02512H10.265L8 0.120117L5.735 2.02012H2.78L2.265 4.93012L0 6.83512L1.48 9.39512L0.965 12.3051L3.745 13.3151L5.225 15.8751L8.005 14.8651L10.785 15.8751L12.265 13.3151L15.045 12.3051L14.53 9.39512L16.01 6.83512H16ZM6.495 12.4051L2.79 8.69512L4.205 7.28012L6.495 9.57512L11.29 4.78012L12.705 6.19512L6.5 12.4001L6.495 12.4051Z"></path></svg>`
-                }
-                if (message.badges[i].type === 'og') {
-                    badgesHTML += `<svg version="1.1" x="0px" y="0px" title="OG" viewBox="0 0 16 16" xml:space="preserve" width="16" height="16"><g><linearGradient id="badge-og-gradient-1" gradientUnits="userSpaceOnUse" x1="12.2" y1="-180" x2="12.2" y2="-165.2556" gradientTransform="matrix(1 0 0 -1 0 -164)"><stop offset="0" style="stop-color:#00FFF2;"></stop><stop offset="0.99" style="stop-color:#006399;"></stop></linearGradient><path style="fill:url(#badge-og-gradient-1);" d="M16,16H9.2v-0.8H8.4v-8h0.8V6.4H16v3.2h-4.5v4.8H13v-1.6h-0.8v-1.6H16V16z"></path><linearGradient id="badge-og-gradient-2" gradientUnits="userSpaceOnUse" x1="3.7636" y1="-164.265" x2="4.0623" y2="-179.9352" gradientTransform="matrix(1 0 0 -1 0 -164)"><stop offset="0" style="stop-color:#00FFF2;"></stop><stop offset="0.99" style="stop-color:#006399;"></stop></linearGradient><path style="fill:url(#badge-og-gradient-2);" d="M6.8,8.8v0.8h-6V8.8H0v-8h0.8V0h6.1v0.8
-                        h0.8v8H6.8z M4.5,6.4V1.6H3v4.8H4.5z"></path><path style="fill:#00FFF2;" d="M6.8,15.2V16h-6v-0.8H0V8.8h0.8V8h6.1v0.8h0.8v6.4C7.7,15.2,6.8,15.2,6.8,15.2z M4.5,14.4V9.6H3v4.8
-                        C3,14.4,4.5,14.4,4.5,14.4z"></path><path style="fill:#00FFF2;" d="M16,8H9.2V7.2H8.4V0.8h0.8V0H16v1.6h-4.5v4.8H13V4.8h-0.8V3.2H16V8z"></path></g>
-                    </svg>`
-                }
-                if (message.badges[i].type === 'sub_gifter') {
-                    badgesHTML += `<svg width="16" height="16" title="Sub Gifter" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_301_17810)"><path d="M7.99999 9.14999V6.62499L0.484985 3.35999V6.34499L1.15499 6.63499V12.73L7.99999 15.995V9.14999Z" fill="#0269D4"></path><path d="M8.00003 10.735V9.61501L1.15503 6.63501V7.70501L8.00003 10.735Z" fill="#0269D4"></path><path d="M15.515 3.355V6.345L14.85 6.64V12.73L12.705 13.755L11.185 14.48L8.00499 15.995V6.715L4.81999 5.295H4.81499L3.29499 4.61L0.484985 3.355L3.66999 1.935L3.67999 1.93L5.09499 1.3L8.00499 0L10.905 1.3L12.32 1.925L12.33 1.935L15.515 3.355Z" fill="#04D0FF"></path><path d="M14.845 6.63501V7.70501L8 10.735V9.61501L14.845 6.63501Z" fill="#0269D4"></path></g><defs><clipPath id="clip0_301_17810"><rect width="16" height="16" fill="white"></rect></clipPath></defs></svg>`
-                }
-                if (message.badges[i].type === 'broadcaster') {
-                    badgesHTML += `<svg version="1.1" x="0px" y="0px" title="Broadcaster" viewBox="0 0 16 16" xml:space="preserve" width="16" height="16"><g id="Badge_Chat_host"><linearGradient id="badge-host-gradient-1" gradientUnits="userSpaceOnUse" x1="4" y1="180.5864" x2="4" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="3.2" y="9.6" style="fill:url(#badge-host-gradient-1);" width="1.6" height="1.6"></rect><linearGradient id="badge-host-gradient-2" gradientUnits="userSpaceOnUse" x1="8" y1="180.5864" x2="8" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><polygon style="fill:url(#badge-host-gradient-2);" points="6.4,9.6 9.6,9.6 9.6,8 11.2,8 
-                        11.2,1.6 9.6,1.6 9.6,0 6.4,0 6.4,1.6 4.8,1.6 4.8,8 6.4,8 	"></polygon><linearGradient id="badge-host-gradient-3" gradientUnits="userSpaceOnUse" x1="2.4" y1="180.5864" x2="2.4" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="1.6" y="6.4" style="fill:url(#badge-host-gradient-3);" width="1.6" height="3.2"></rect><linearGradient id="badge-host-gradient-4" gradientUnits="userSpaceOnUse" x1="12" y1="180.5864" x2="12" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="11.2" y="9.6" style="fill:url(#badge-host-gradient-4);" width="1.6" height="1.6"></rect><linearGradient id="badge-host-gradient-5" gradientUnits="userSpaceOnUse" x1="8" y1="180.5864" x2="8" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><polygon style="fill:url(#badge-host-gradient-5);" points="4.8,12.8 6.4,12.8 6.4,14.4 
-                        4.8,14.4 4.8,16 11.2,16 11.2,14.4 9.6,14.4 9.6,12.8 11.2,12.8 11.2,11.2 4.8,11.2 	"></polygon><linearGradient id="badge-host-gradient-6" gradientUnits="userSpaceOnUse" x1="13.6" y1="180.5864" x2="13.6" y2="200.6666" gradientTransform="matrix(1 0 0 1 0 -182)"><stop offset="0" style="stop-color:#FF1CD2;"></stop><stop offset="0.99" style="stop-color:#B20DFF;"></stop></linearGradient><rect x="12.8" y="6.4" style="fill:url(#badge-host-gradient-6);" width="1.6" height="3.2"></rect></g>
-                    </svg>`
-                }
-
-                // other badges...
-            }
+            badgesHTML = message.badges.map(badge => createBadgeHTML(badge, channelSubscriberBadges)).join('');
         }
 
-        // Converting UTC date to users local time zone
+        // UTC tarihini kullanıcının yerel saat dilimine çevirme
         const utcDate = new Date(message.created_at);
         const localDate = utcDate.toLocaleString(undefined, {
             hour: '2-digit',
             minute: '2-digit',
-            //second: '2-digit',
             hour12: false
         })
-        const localDateHTML = `<span class="opacity-60" style="font-weight: lighter; font-size: 12px;">${localDate}</span>`
-
+        const localDateHTML = `<span class="opacity-60" style="font-weight: lighter; font-size: ${TIMESTAMP_FONT_SIZE};">${localDate}</span>`
 
         let messageReplyElementHTML = ""
         if (message.type == 'reply') {
@@ -135,7 +114,7 @@ ipcRenderer.on('message', (event, message) => {
                 </div>`
         }
 
-        const usernameHTML = `<span class="font-semibold text-[${message.sender.identity.color}]">${message.sender.username}:</span>`
+        const usernameHTML = `<span class="font-semibold text-[${message.sender.identity.color}]" style="font-size: ${USERNAME_FONT_SIZE};">${message.sender.username}:</span>`
 
         const messageWith7TVEmotes = (msg) => {
             const words = msg.split(" ")
@@ -143,7 +122,7 @@ ipcRenderer.on('message', (event, message) => {
                 const finded = channelEmotes7tv.emote_set.emotes.find(emote => emote.name === word)
                 if (finded) {
                     const imgSrc = finded.data.host.url + '/' + (finded.data.host.files?.[0]?.name || "1x.avif")
-                    return `<img src="${imgSrc}" alt="${word}" title="${word}" width="24" height="24" class="mx-1 inline-block static">`;
+                    return `<img src="${imgSrc}" alt="${word}" title="${word}" style="width: ${EMOTE_SIZE}; height: ${EMOTE_SIZE};" class="mx-1 inline-block static">`;
                 }
                 return word
             }).join(" ")
@@ -160,15 +139,14 @@ ipcRenderer.on('message', (event, message) => {
             const emoteRegex = /\[emote:(\d+):[^\]]+\]/g
             const msg_replaced = msg.replace(emoteRegex, (match, emoteId) => {
                 const imgSrc = `https://files.kick.com/emotes/${emoteId}/fullsize`
-                return `<img src="${imgSrc}" alt="emote" width="24" height="24" class="mx-1 inline-block static">`
+                return `<img src="${imgSrc}" alt="emote" style="width: ${EMOTE_SIZE}; height: ${EMOTE_SIZE};" class="mx-1 inline-block static">`
             })
             return msg_replaced
         }
-
         renderMessage = messageWithEmotes(renderMessage)
 
         messageElement.innerHTML = `
-            <div id="message-container">
+            <div id="message-container" style="font-size: ${FONT_SIZE};">
                 ${messageReplyElementHTML}
                 <span class="flex items-center space-x-1 float-start me-1">
                     ${localDateHTML} ${badgesHTML} ${usernameHTML}
@@ -238,90 +216,76 @@ ipcRenderer.on('server-message', (event, message) => {
     }
 })
 
-ipcRenderer.on('message-deleted', (event, data) => {
-    console.log('MESSAGE DELETED', data);
-    const channelChatDiv = document.getElementById(`chat-${data.channel_name}`)
-    if (channelChatDiv) {
-        const messageDiv = channelChatDiv.querySelector(`div[data-message-id="${data.message.id}"]`)
+function handleChatEvent(eventType, data) {
+    console.log(`${eventType.toUpperCase()}:`, data);
+    const channelChatDiv = document.getElementById(`chat-${data.channel_name}`);
+    if (!channelChatDiv) return;
 
-        if (messageDiv) {
-            messageDiv.classList.add('!opacity-40')
-            messageDiv.setAttribute('data-deleted', 'true')
-            const messageContainerDiv = messageDiv.querySelector('#message-container')
-            const deletedText = document.createElement('span')
-            deletedText.classList.add('ms-1', 'font-semibold')
-            deletedText.innerText = '(Deleted)'
-            messageContainerDiv.appendChild(deletedText)
-        }
+    let messageElement
 
-        // Check the number of messages and delete old messages if necessary
-        removeOldMessages(channelChatDiv)
-
-        const autoScroll = channelChatDiv.getAttribute('data-auto-scroll') === 'true'
-        const scrollDownButton = channelChatDiv.querySelector('.scroll-down-button')
-
-        if (autoScroll) {
-            channelChatDiv.scrollTop = channelChatDiv.scrollHeight // go to bottom
-            hideScrollDownButton(scrollDownButton)
-        } else {
-            showScrollDownButton(scrollDownButton)
-        }
+    switch (eventType) {
+        case 'message-deleted':
+            const messageDiv = channelChatDiv.querySelector(`div[data-message-id="${data.message.id}"]`);
+            if (messageDiv) {
+                messageDiv.classList.add('!opacity-40');
+                messageDiv.setAttribute('data-deleted', 'true');
+                const messageContainerDiv = messageDiv.querySelector('#message-container');
+                const deletedText = document.createElement('span');
+                deletedText.classList.add('ms-1', 'font-semibold');
+                deletedText.innerText = '(Message deleted)';
+                messageContainerDiv.appendChild(deletedText);
+            }
+            return;
+        case 'user-banned':
+            messageElement = document.createElement('div');
+            if (data.permanent) {
+                messageElement.textContent = `${data.banned_by.username} has permanently banned ${data.user.slug} from the chat.`;
+            } else {
+                messageElement.textContent = `${data.banned_by.username} has timed out ${data.user.slug} for ${data.duration} minutes.`;
+            }
+            break;
+        case 'user-unbanned':
+            messageElement = document.createElement('div');
+            messageElement.textContent = `${data.unbanned_by.username} has removed the ban on ${data.user.slug}.`;
+            break;
+        case 'chatroom-cleared':
+            messageElement = document.createElement('div');
+            messageElement.textContent = 'A moderator has cleared the chat room.';
+            break;
+        case 'subscription-event':
+            messageElement = document.createElement('div');
+            messageElement.textContent = `BIRI ABONE OLDU VERIYI KONSOLDAN BAKMAN LAZIM HACI.`;
+            break;
+        default:
+            return;
     }
-})
 
-ipcRenderer.on('user-banned', (event, data) => {
-    console.log('USER BANNED', data);
-    const channelChatDiv = document.getElementById(`chat-${data.channel_name}`)
-    if (channelChatDiv) {
-        const messageElement = document.createElement('div')
-        if (data.permanent) {
-            messageElement.textContent = `${data.banned_by.username} has permanently banned ${data.user.slug}`
-        } else {
-            messageElement.textContent = `${data.banned_by.username} has timed out ${data.user.slug} from chat. Timeout duration: ${data.duration} minute(s)`
-        }
+    messageElement.className = 'p-1';
+    channelChatDiv.appendChild(messageElement);
+    
+    updateChatView(channelChatDiv);
+}
 
-        messageElement.className = 'p-1'
-        channelChatDiv.appendChild(messageElement)
-        
-        // Check the number of messages and delete old messages if necessary
-        removeOldMessages(channelChatDiv)
+function updateChatView(channelChatDiv) {
+    removeOldMessages(channelChatDiv);
 
-        const autoScroll = channelChatDiv.getAttribute('data-auto-scroll') === 'true'
-        const scrollDownButton = channelChatDiv.querySelector('.scroll-down-button')
+    const autoScroll = channelChatDiv.getAttribute('data-auto-scroll') === 'true';
+    const scrollDownButton = channelChatDiv.querySelector('.scroll-down-button');
 
-        if (autoScroll) {
-            channelChatDiv.scrollTop = channelChatDiv.scrollHeight // go to bottom
-            hideScrollDownButton(scrollDownButton)
-        } else {
-            showScrollDownButton(scrollDownButton)
-        }
+    if (autoScroll) {
+        channelChatDiv.scrollTop = channelChatDiv.scrollHeight;
+        hideScrollDownButton(scrollDownButton);
+    } else {
+        showScrollDownButton(scrollDownButton);
     }
-})
+}
 
-ipcRenderer.on('user-unbanned', (event, data) => {
-    console.log('USER UNBANNED', data);
-    const channelChatDiv = document.getElementById(`chat-${data.channel_name}`)
-    if (channelChatDiv) {
-        const messageElement = document.createElement('div')
-        messageElement.textContent = `${data.unbanned_by.username} has unbanned ${data.user.slug}`
+ipcRenderer.on('message-deleted', (event, data) => handleChatEvent('message-deleted', data));
+ipcRenderer.on('user-banned', (event, data) => handleChatEvent('user-banned', data));
+ipcRenderer.on('user-unbanned', (event, data) => handleChatEvent('user-unbanned', data));
+ipcRenderer.on('chatroom-cleared', (event, data) => handleChatEvent('chatroom-cleared', data));
+ipcRenderer.on('subscription-event', (event, data) => handleChatEvent('subscription-event', data));
 
-        messageElement.className = 'p-1'
-        channelChatDiv.appendChild(messageElement)
-        
-        // Check the number of messages and delete old messages if necessary
-        removeOldMessages(channelChatDiv)
-
-        const autoScroll = channelChatDiv.getAttribute('data-auto-scroll') === 'true'
-        const scrollDownButton = channelChatDiv.querySelector('.scroll-down-button')
-
-        if (autoScroll) {
-            channelChatDiv.scrollTop = channelChatDiv.scrollHeight // go to bottom
-            hideScrollDownButton(scrollDownButton)
-        } else {
-            showScrollDownButton(scrollDownButton)
-        }
-    }
-})
 
 addChannelButton.addEventListener('click', () => {
     addChannelButton.classList.add('hidden')
@@ -479,7 +443,9 @@ function createChannelTab(channel) {
     let tabData = {slug: channel, tab_active: false}
     existingChannels.set(channel, tabData)
     setActiveChannel(channel)
+    ipcRenderer.send('save-channel', channel)
 }
+
 function setActiveChannel(channel) {
     console.log('CHANNEL TO BE ACTIVATED:', existingChannels.get(channel))
     // Set tab_active: false for all channels
@@ -548,6 +514,7 @@ function removeChannel(channel) {
 
     const firstChannel = existingChannels.keys().next().value
     setActiveChannel(firstChannel)
+    ipcRenderer.send('remove-channel', channel)
 }
 
 function sendMessage(channel, message) {
@@ -573,3 +540,8 @@ function removeOldMessages(channelChatDiv) {
         messages[0].remove() // Delete the message at the top
     }
 }
+
+ipcRenderer.on('app-closing', () => {
+    // Gerekli temizleme işlemlerini yapın
+    ipcRenderer.send('app-closed');
+})
