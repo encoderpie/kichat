@@ -6,11 +6,19 @@
   </head>
   <body class="bg-[#1b1717] text-white">
     <div class="container space-y-2 p-5 text-white">
-      <div class="mb-2 text-center text-xl font-bold uppercase">Kichat chat client login</div>
-      <div>Please ensure that the Kichat extension is installed and that you are logged into your Kick.com account.</div>
+      <div class="mb-2 text-center text-xl font-bold uppercase">
+        Kichat chat client login
+      </div>
+      <div>
+        Please ensure that the Kichat extension is installed and that you are
+        logged into your Kick.com account.
+      </div>
       <ol class="list-decimal p-3 px-8">
         <li>Add the Kichat Connect extension to your browser.</li>
-        <li>Run the Kichat Connect extension on kick.com to connect your account with Kichat.</li>
+        <li>
+          Run the Kichat Connect extension on kick.com to connect your account
+          with Kichat.
+        </li>
       </ol>
       <!-- <div>Alternative login method</div>
       <ol class="list-decimal p-3 px-8">
@@ -21,20 +29,20 @@
     </div>
     <script>
       const checkCookies = async () => {
-          try {
-              const response = await fetch('http://localhost:53340/login/cookie');
-              if (response.ok) {
-                  const data = await response.json();
-                  if (data.cookies) {
-                      window.location.href = 'main.html';
-                  }
-              }
-          } catch (error) {
-              console.error('Error checking cookies:', error);
+        try {
+          const response = await fetch('http://localhost:53340/login/cookie')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.cookies) {
+              window.location.href = 'main.html'
+            }
           }
-      };
+        } catch (error) {
+          console.error('Error checking cookies:', error)
+        }
+      }
 
-      setInterval(checkCookies, 3000); // Check every 3 seconds
+      setInterval(checkCookies, 3000) // Check every 3 seconds
     </script>
   </body>
 </html>

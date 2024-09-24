@@ -1,7 +1,7 @@
-:root{
-    --main-color: rgb(55 65 81);
-    --secondary-color: #101012; /* #1b1717; */
-    --box-color: rgb(30 30 30); /*  #282424; */
+:root {
+  --main-color: rgb(55 65 81);
+  --secondary-color: #101012; /* #1b1717; */
+  --box-color: rgb(30 30 30); /*  #282424; */
 }
 
 body {
@@ -11,31 +11,31 @@ body {
 }
 
 .border-t-3 {
-    border-top-width: 2.5px !important;
+  border-top-width: 2.5px !important;
 }
 .border-b-3 {
-    border-bottom-width: 2.5px !important;
+  border-bottom-width: 2.5px !important;
 }
 
 /* width */
 ::-webkit-scrollbar {
-    width: 5px;;
+  width: 5px;
 }
 
 ::-webkit-scrollbar:hover {
-    width: 10px;
+  width: 10px;
 }
-  
+
 ::-webkit-scrollbar-track {
-  background: var(--secondary-color); 
+  background: var(--secondary-color);
 }
-   
+
 ::-webkit-scrollbar-thumb {
-  background: #323232; 
+  background: #323232;
 }
-  
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #434343; 
+  background: #434343;
 }
 
 .space-x-0\.1 > :not([hidden]) ~ :not([hidden]) {

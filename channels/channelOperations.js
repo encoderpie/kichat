@@ -1,5 +1,15 @@
-import { getChatroomId, getChannelData, getChannelEmotes, getChannel7TVEmotes, getOldMessagesOfChannel } from '../utils/channelUtils.js'
-import { oldMessageParser, messageParser, eventParser } from '../utils/messageParser.js'
+import {
+  getChatroomId,
+  getChannelData,
+  getChannelEmotes,
+  getChannel7TVEmotes,
+  getOldMessagesOfChannel,
+} from '../utils/channelUtils.js'
+import {
+  oldMessageParser,
+  messageParser,
+  eventParser,
+} from '../utils/messageParser.js'
 import axios from 'axios'
 import Store from 'electron-store'
 
@@ -13,13 +23,13 @@ const KICK_BASE_URL = 'https://kick.com'
  * Olay işleyicileri için nesne
  */
 const eventHandlers = {
-    'App\\Events\\ChatMessageEvent': handleChatMessageEvent,
-    'App\\Events\\MessageDeletedEvent': handleGenericEvent('message-deleted'),
-    'App\\Events\\UserBannedEvent': handleGenericEvent('user-banned'),
-    'App\\Events\\UserUnbannedEvent': handleGenericEvent('user-unbanned'),
-    'App\\Events\\ChatroomClearEvent': handleGenericEvent('chatroom-cleared'),
-    'App\\Events\\SubscriptionEvent': handleGenericEvent('subscription-event')
-};
+  'App\\Events\\ChatMessageEvent': handleChatMessageEvent,
+  'App\\Events\\MessageDeletedEvent': handleGenericEvent('message-deleted'),
+  'App\\Events\\UserBannedEvent': handleGenericEvent('user-banned'),
+  'App\\Events\\UserUnbannedEvent': handleGenericEvent('user-unbanned'),
+  'App\\Events\\ChatroomClearEvent': handleGenericEvent('chatroom-cleared'),
+  'App\\Events\\SubscriptionEvent': handleGenericEvent('subscription-event'),
+}
 
 /**
  * Sohbet mesajı olayını işler
@@ -29,8 +39,8 @@ const eventHandlers = {
  * @param {BrowserWindow} mainWindow - Ana pencere
  */
 function handleChatMessageEvent(channel, chatroomId, data, mainWindow) {
-    const parsedMessage = messageParser(channel, chatroomId, data);
-    mainWindow.webContents.send('message', parsedMessage);
+  const parsedMessage = messageParser(channel, chatroomId, data)
+  mainWindow.webContents.send('message', parsedMessage)
 }
 
 /**
@@ -39,10 +49,10 @@ function handleChatMessageEvent(channel, chatroomId, data, mainWindow) {
  * @returns {Function} Olay işleyici fonksiyonu
  */
 function handleGenericEvent(eventType) {
-    return (channel, chatroomId, data, mainWindow) => {
-        const parsedData = eventParser(channel, chatroomId, data);
-        mainWindow.webContents.send(eventType, parsedData);
-    };
+  return (channel, chatroomId, data, mainWindow) => {
+    const parsedData = eventParser(channel, chatroomId, data)
+    mainWindow.webContents.send(eventType, parsedData)
+  }
 }
 
 /**
@@ -52,24 +62,35 @@ function handleGenericEvent(eventType) {
  * @param {Map} activeChannels - Aktif kanal bağlantılarını saklamak için bir Map
  * @param {Pusher} pusher - Pusher örneği
  */
-export async function connectToChannels(channels, mainWindow, activeChannels, pusher) {
-    if (!pusher) {
-        console.error('Pusher object is undefined');
-        return;
+export async function connectToChannels(
+  channels,
+  mainWindow,
+  activeChannels,
+  pusher
+) {
+  if (!pusher) {
+    console.error('Pusher object is undefined')
+    return
+  }
+
+  for (const [channel, chatroomId] of channels) {
+    if (activeChannels.has(chatroomId)) {
+      console.log(`Already connected to channel #${channel} (${chatroomId})`)
+      continue
     }
 
-    for (const [channel, chatroomId] of channels) {
-        if (activeChannels.has(chatroomId)) {
-            console.log(`Already connected to channel #${channel} (${chatroomId})`)
-            continue;
-        }
-
-        try {
-            await connectSingleChannel(channel, chatroomId, mainWindow, activeChannels, pusher);
-        } catch (error) {
-            handleConnectionError(channel, error, mainWindow);
-        }
+    try {
+      await connectSingleChannel(
+        channel,
+        chatroomId,
+        mainWindow,
+        activeChannels,
+        pusher
+      )
+    } catch (error) {
+      handleConnectionError(channel, error, mainWindow)
     }
+  }
 }
 
 /**
@@ -80,19 +101,25 @@ export async function connectToChannels(channels, mainWindow, activeChannels, pu
  * @param {Map} activeChannels - Aktif kanal bağlantılarını saklamak için bir Map
  * @param {Pusher} pusher - Pusher örneği
  */
-async function connectSingleChannel(channel, chatroomId, mainWindow, activeChannels, pusher) {
-    const channelData = await fetchChannelData(channel);
-    sendConnectionStatus(mainWindow, channel, 'connecting', channelData);
+async function connectSingleChannel(
+  channel,
+  chatroomId,
+  mainWindow,
+  activeChannels,
+  pusher
+) {
+  const channelData = await fetchChannelData(channel)
+  sendConnectionStatus(mainWindow, channel, 'connecting', channelData)
 
-    const oldMessages = await fetchOldMessages(channelData.id);
-    sendOldMessages(oldMessages, channel, mainWindow);
+  const oldMessages = await fetchOldMessages(channelData.id)
+  sendOldMessages(oldMessages, channel, mainWindow)
 
-    const pusherChannel = subscribeToPusherChannel(pusher, chatroomId, channel);
-    bindPusherEvents(pusherChannel, channel, chatroomId, mainWindow);
+  const pusherChannel = subscribeToPusherChannel(pusher, chatroomId, channel)
+  bindPusherEvents(pusherChannel, channel, chatroomId, mainWindow)
 
-    console.log(`Connected to #${channel} (${chatroomId})`);
-    activeChannels.set(chatroomId, { pusherChannel, channelName: channel });
-    sendConnectionStatus(mainWindow, channel, 'connected');
+  console.log(`Connected to #${channel} (${chatroomId})`)
+  activeChannels.set(chatroomId, { pusherChannel, channelName: channel })
+  sendConnectionStatus(mainWindow, channel, 'connected')
 }
 
 /**
@@ -101,12 +128,12 @@ async function connectSingleChannel(channel, chatroomId, mainWindow, activeChann
  * @returns {Promise<Object>} Kanal verileri
  */
 async function fetchChannelData(channel) {
-    let channelData = await getChannelData(channel);
-    const channelEmotes = await getChannelEmotes(channel);
-    const channel7TVEmotes = await getChannel7TVEmotes(channelData.user_id);
-    channelData.chatroom.emotes = channelEmotes;
-    channelData.chatroom.emotes7tv = channel7TVEmotes;
-    return channelData;
+  let channelData = await getChannelData(channel)
+  const channelEmotes = await getChannelEmotes(channel)
+  const channel7TVEmotes = await getChannel7TVEmotes(channelData.user_id)
+  channelData.chatroom.emotes = channelEmotes
+  channelData.chatroom.emotes7tv = channel7TVEmotes
+  return channelData
 }
 
 /**
@@ -115,8 +142,10 @@ async function fetchChannelData(channel) {
  * @returns {Promise<Array>} Sıralanmış eski mesajlar
  */
 async function fetchOldMessages(channelId) {
-    const getOldMessages = await getOldMessagesOfChannel(channelId);
-    return getOldMessages.data.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const getOldMessages = await getOldMessagesOfChannel(channelId)
+  return getOldMessages.data.messages.sort(
+    (a, b) => new Date(a.created_at) - new Date(b.created_at)
+  )
 }
 
 /**
@@ -126,11 +155,11 @@ async function fetchOldMessages(channelId) {
  * @param {BrowserWindow} mainWindow - Ana Electron penceresi
  */
 function sendOldMessages(messages, channel, mainWindow) {
-    messages.forEach(message => {
-        const parsedMessage = oldMessageParser(message, channel);
-        console.log(message, parsedMessage);
-        mainWindow.webContents.send('message', parsedMessage);
-    });
+  messages.forEach((message) => {
+    const parsedMessage = oldMessageParser(message, channel)
+    console.log(message, parsedMessage)
+    mainWindow.webContents.send('message', parsedMessage)
+  })
 }
 
 /**
@@ -141,19 +170,19 @@ function sendOldMessages(messages, channel, mainWindow) {
  * @returns {PusherChannel} Pusher kanal örneği
  */
 function subscribeToPusherChannel(pusher, chatroomId, channel) {
-    const pusherChannelName = `chatrooms.${chatroomId}.v2`;
-    
-    if (pusher.channel(pusherChannelName)) {
-        pusher.unsubscribe(pusherChannelName);
-    }
+  const pusherChannelName = `chatrooms.${chatroomId}.v2`
 
-    const pusherChannel = pusher.subscribe(pusherChannelName);
-    
-    pusherChannel.bind('pusher:subscription_succeeded', () => {
-        console.log(`Successfully subscribed to #${channel} (${chatroomId})`);
-    });
+  if (pusher.channel(pusherChannelName)) {
+    pusher.unsubscribe(pusherChannelName)
+  }
 
-    return pusherChannel;
+  const pusherChannel = pusher.subscribe(pusherChannelName)
+
+  pusherChannel.bind('pusher:subscription_succeeded', () => {
+    console.log(`Successfully subscribed to #${channel} (${chatroomId})`)
+  })
+
+  return pusherChannel
 }
 
 /**
@@ -164,21 +193,21 @@ function subscribeToPusherChannel(pusher, chatroomId, channel) {
  * @param {BrowserWindow} mainWindow - Ana Electron penceresi
  */
 function bindPusherEvents(pusherChannel, channel, chatroomId, mainWindow) {
-    pusherChannel.bind_global((eventName, data) => {
-        console.log('Event Name:', eventName);
-        console.log('Event Data:', data);
+  pusherChannel.bind_global((eventName, data) => {
+    console.log('Event Name:', eventName)
+    console.log('Event Data:', data)
 
-        if (eventName === 'pusher:subscription_succeeded') {
-            return;
-        }
+    if (eventName === 'pusher:subscription_succeeded') {
+      return
+    }
 
-        const handler = eventHandlers[eventName];
-        if (handler) {
-            handler(channel, chatroomId, data, mainWindow);
-        } else {
-            console.log(`Unknown event: ${eventName}`);
-        }
-    });
+    const handler = eventHandlers[eventName]
+    if (handler) {
+      handler(channel, chatroomId, data, mainWindow)
+    } else {
+      console.log(`Unknown event: ${eventName}`)
+    }
+  })
 }
 
 /**
@@ -188,8 +217,12 @@ function bindPusherEvents(pusherChannel, channel, chatroomId, mainWindow) {
  * @param {BrowserWindow} mainWindow - Ana Electron penceresi
  */
 function handleConnectionError(channel, error, mainWindow) {
-    console.error(`Error connecting to channel #${channel}:`, error);
-    mainWindow.webContents.send('server-message', { channel, status: 'error', error: error.message });
+  console.error(`Error connecting to channel #${channel}:`, error)
+  mainWindow.webContents.send('server-message', {
+    channel,
+    status: 'error',
+    error: error.message,
+  })
 }
 
 /**
@@ -200,7 +233,11 @@ function handleConnectionError(channel, error, mainWindow) {
  * @param {Object} [channelData] - Kanal verileri (isteğe bağlı)
  */
 function sendConnectionStatus(mainWindow, channel, status, channelData = null) {
-    mainWindow.webContents.send('server-message', { channel, status, channelData });
+  mainWindow.webContents.send('server-message', {
+    channel,
+    status,
+    channelData,
+  })
 }
 
 /**
@@ -210,24 +247,26 @@ function sendConnectionStatus(mainWindow, channel, status, channelData = null) {
  * @param {Pusher} pusher - Pusher örneği
  */
 export async function disconnectFromChannel(channel, activeChannels, pusher) {
-    const chatroomId = await getChatroomId([channel]);
-    if (chatroomId[0]) {
-        const channelData = activeChannels.get(chatroomId[0]);
-        if (channelData) {
-            const { pusherChannel, channelName } = channelData;
-            const pusherChannelName = `chatrooms.${chatroomId[0]}.v2`;
-            
-            pusher.unsubscribe(pusherChannelName);
-            pusherChannel.unbind_all();
-            
-            console.log(`Disconnected from channel #${channelName} (${chatroomId[0]})`);
-            activeChannels.delete(chatroomId[0]);
-        } else {
-            console.log(`Socket for channel ${channel} not found`);
-        }
+  const chatroomId = await getChatroomId([channel])
+  if (chatroomId[0]) {
+    const channelData = activeChannels.get(chatroomId[0])
+    if (channelData) {
+      const { pusherChannel, channelName } = channelData
+      const pusherChannelName = `chatrooms.${chatroomId[0]}.v2`
+
+      pusher.unsubscribe(pusherChannelName)
+      pusherChannel.unbind_all()
+
+      console.log(
+        `Disconnected from channel #${channelName} (${chatroomId[0]})`
+      )
+      activeChannels.delete(chatroomId[0])
     } else {
-        console.log(`Channel ID for ${channel} not found`);
+      console.log(`Socket for channel ${channel} not found`)
     }
+  } else {
+    console.log(`Channel ID for ${channel} not found`)
+  }
 }
 
 /**
@@ -236,36 +275,40 @@ export async function disconnectFromChannel(channel, activeChannels, pusher) {
  * @param {Object} channelData - Kanal verileri
  */
 export async function sendMessageToChannel(messageContent, channelData) {
-    const user_cookies = store.get('cookies');
-    const user_session_token = store.get('session_token');
-    if (channelData?.id) {
-        try {
-            const axiosRequest = await axios.post(
-                `${API_BASE_URL}/messages/send/${channelData.chatroom.id}`,
-                {
-                    content: messageContent,
-                    type: "message",
-                },
-                {
-                    headers: {
-                        accept: "application/json, text/plain, */*",
-                        authorization: `Bearer ${user_session_token}`,
-                        "content-type": "application/json",
-                        "x-xsrf-token": user_session_token,
-                        cookie: user_cookies,
-                        Referer: `${KICK_BASE_URL}/${channelData.slug}`,
-                    },
-                }
-            );
-            if (axiosRequest.status === 200) {
-                console.log(`Message sent successfully -> ${channelData.slug}: ${messageContent}`);
-            } else {
-                console.log(`An error occurred while sending the message -> status_code: ${axiosRequest.status} - ${axiosRequest.statusText} CHANNEL: ${channelData.slug} MESSAGE: ${messageContent}`);
-            }
-        } catch (error) {
-            console.error(`Error sending message to ${channelData.slug}:`, error);
+  const user_cookies = store.get('cookies')
+  const user_session_token = store.get('session_token')
+  if (channelData?.id) {
+    try {
+      const axiosRequest = await axios.post(
+        `${API_BASE_URL}/messages/send/${channelData.chatroom.id}`,
+        {
+          content: messageContent,
+          type: 'message',
+        },
+        {
+          headers: {
+            accept: 'application/json, text/plain, */*',
+            authorization: `Bearer ${user_session_token}`,
+            'content-type': 'application/json',
+            'x-xsrf-token': user_session_token,
+            cookie: user_cookies,
+            Referer: `${KICK_BASE_URL}/${channelData.slug}`,
+          },
         }
-    } else {
-        console.log(`Channel ID for ${channelData.slug} not found`);
+      )
+      if (axiosRequest.status === 200) {
+        console.log(
+          `Message sent successfully -> ${channelData.slug}: ${messageContent}`
+        )
+      } else {
+        console.log(
+          `An error occurred while sending the message -> status_code: ${axiosRequest.status} - ${axiosRequest.statusText} CHANNEL: ${channelData.slug} MESSAGE: ${messageContent}`
+        )
+      }
+    } catch (error) {
+      console.error(`Error sending message to ${channelData.slug}:`, error)
     }
+  } else {
+    console.log(`Channel ID for ${channelData.slug} not found`)
+  }
 }

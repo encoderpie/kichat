@@ -1,55 +1,64 @@
 {
-    "name": "kichat",
-    "version": "1.0.0",
-    "description": "Kichat for kick.com chat",
-    "author": "encoderpie",
-    "main": "main.js",
-    "type": "module",
-    "scripts": {
-        "start": "electron .",
-        "build": "electron-builder"
+  "name": "kichat",
+  "version": "1.0.0",
+  "description": "Kichat for kick.com chat",
+  "author": "encoderpie",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "build": {
+    "appId": "com.encoderpie.kichat",
+    "win": {
+      "target": "nsis",
+      "icon": "resources/kichat.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "extraResources": {
+        "from": "resources/",
+        "to": "resources/"
+      }
     },
-    "build": {
-        "appId": "com.encoderpie.kichat",
-        "win": {
-            "target": "nsis",
-            "icon": "resources/kichat.ico",
-            "requestedExecutionLevel": "asInvoker",
-            "extraResources": {
-                "from": "resources/",
-                "to": "resources/"
-            }
-        },
-        "nsis": {
-            "oneClick": false,
-            "allowToChangeInstallationDirectory": true,
-            "createDesktopShortcut": true,
-            "createStartMenuShortcut": true,
-            "shortcutName": "Kichat"
-        },
-        "files": [
-            "main.js",
-            "lib.js",
-            "utils.js",
-            "preload.js",
-            "package.json",
-            "node_modules/**",
-            "public/**"
-        ]
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kichat"
     },
-    "devDependencies": {
-        "electron": "^31.3.0",
-        "electron-builder": "^24.13.3"
-    },
-    "dependencies": {
-        "axios": "^1.7.2",
-        "cors": "^2.8.5",
-        "dotenv": "^16.4.5",
-        "electron-store": "^10.0.0",
-        "express": "^4.19.2",
-        "puppeteer": "^22.14.0",
-        "puppeteer-extra": "^3.3.6",
-        "puppeteer-extra-plugin-stealth": "^2.11.2",
-        "pusher-js": "^8.4.0-rc2"
-    }
+    "files": [
+      "main.js",
+      "lib.js",
+      "utils.js",
+      "preload.js",
+      "package.json",
+      "node_modules/**",
+      "public/**"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3",
+    "eslint": "^9.11.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "globals": "^15.9.0",
+    "prettier": "^3.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "core-js": "^3.38.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "electron-store": "^10.0.0",
+    "express": "^4.19.2",
+    "puppeteer": "^22.14.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "pusher-js": "^8.4.0-rc2",
+    "regenerator-runtime": "^0.14.1"
+  }
 }
