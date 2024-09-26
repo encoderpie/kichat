@@ -9,7 +9,6 @@ Kichat is an open-source chat client for kick.com. Developed using Electron, it 
 - Auto-scrolling and message limit
 - Emote and badge support
 - Easy login with Kick.com account
-- Customizable interface
 
 ## Installation
 
