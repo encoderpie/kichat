@@ -65,11 +65,20 @@ function storeCookiesAndToken(store, cookies, session_token) {
 }
 
 function handleSuccessfulLogin(app, loginWindow, createMainWindow) {
-  if (global.mainWindow) {
-    app.relaunch()
-    app.exit()
-  } else if (loginWindow) {
+  if (loginWindow && !loginWindow.isDestroyed()) {
     loginWindow.close()
-    global.mainWindow = createMainWindow()
   }
+  
+  if (!global.mainWindow || global.mainWindow.isDestroyed()) {
+    global.mainWindow = createMainWindow()
+  } else {
+    global.mainWindow.reload()
+  }
+
+  // Login penceresini kapatmak için bir süre bekleyelim
+  setTimeout(() => {
+    if (global.loginWindow && !global.loginWindow.isDestroyed()) {
+      global.loginWindow.close()
+    }
+  }, 1000) // 1 saniye bekle
 }

@@ -12,6 +12,7 @@ import {
 } from '../utils/messageParser.js'
 import axios from 'axios'
 import Store from 'electron-store'
+import { app } from 'electron'
 
 const store = new Store()
 
@@ -64,7 +65,6 @@ function handleGenericEvent(eventType) {
  */
 export async function connectToChannels(
   channels,
-  mainWindow,
   activeChannels,
   pusher
 ) {
@@ -83,12 +83,11 @@ export async function connectToChannels(
       await connectSingleChannel(
         channel,
         chatroomId,
-        mainWindow,
         activeChannels,
         pusher
       )
     } catch (error) {
-      handleConnectionError(channel, error, mainWindow)
+      handleConnectionError(channel, error)
     }
   }
 }
@@ -104,12 +103,11 @@ export async function connectToChannels(
 async function connectSingleChannel(
   channel,
   chatroomId,
-  mainWindow,
   activeChannels,
   pusher
 ) {
   const channelData = await fetchChannelData(channel)
-  sendConnectionStatus(mainWindow, channel, 'connecting', channelData)
+  sendConnectionStatus(channel, 'connecting', channelData)
 
   const oldMessages = await fetchOldMessages(channelData.id)
   sendOldMessages(oldMessages, channel, mainWindow)
@@ -216,13 +214,17 @@ function bindPusherEvents(pusherChannel, channel, chatroomId, mainWindow) {
  * @param {Error} error - Hata nesnesi
  * @param {BrowserWindow} mainWindow - Ana Electron penceresi
  */
-function handleConnectionError(channel, error, mainWindow) {
+function handleConnectionError(channel, error) {
   console.error(`Error connecting to channel #${channel}:`, error)
-  mainWindow.webContents.send('server-message', {
-    channel,
-    status: 'error',
-    error: error.message,
-  })
+  if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+    global.mainWindow.webContents.send('server-message', {
+      channel,
+      status: 'error',
+      error: error.message,
+    })
+  } else {
+    console.log(`Cannot send error for ${channel}: Main window is not available`)
+  }
 }
 
 /**
@@ -232,12 +234,16 @@ function handleConnectionError(channel, error, mainWindow) {
  * @param {string} status - Bağlantı durumu
  * @param {Object} [channelData] - Kanal verileri (isteğe bağlı)
  */
-function sendConnectionStatus(mainWindow, channel, status, channelData = null) {
-  mainWindow.webContents.send('server-message', {
-    channel,
-    status,
-    channelData,
-  })
+function sendConnectionStatus(channel, status, channelData = null) {
+  if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+    global.mainWindow.webContents.send('server-message', {
+      channel,
+      status,
+      channelData,
+    })
+  } else {
+    console.log(`Cannot send connection status for ${channel}: Main window is not available`)
+  }
 }
 
 /**

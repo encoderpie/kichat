@@ -66,16 +66,16 @@
     >
       <div
         id="chat-container-home"
-        class="grid grid-rows-[1fr_auto] w-full h-full"
+        class="grid grid-rows-[1fr_auto] w-full h-full relative"
       >
         <div id="chat-home" class="p-4 w-full">
           <div class="flex items-center space-x-2">
             <h1 class="text-3xl font-bold text-green-400 mb-2">Kichat</h1>
-            <p class="mt-2">
+            <p class="mt-1">
               developed by
               <a
                 href="https://github.com/encoderpie"
-                class="text-blue-400 hover:underline"
+                class="text-blue-400 hover:underline text-lg"
                 target="_blank"
                 rel="noopener noreferrer"
                 >encoderpie</a
@@ -170,7 +170,16 @@
             </div>
           </div>
         </div>
-        <div class="text-end opacity-60 py-0.5 px-1">v1.0</div>
+        <div class="text-end opacity-60 py-0.5 px-1">
+          <button id="logoutButton" class="me-4">
+            logout
+          </button>
+          <span>v1.0 DEMO</span>
+        </div>
+        
+        <div class="absolute inset-0 flex items-end justify-center pointer-events-none z-0 ms-4">
+          <div class="text-gray-500 font-bold text-6xl opacity-20 mb-7 tracking-widest">開発中</br>テスト中</br>オープンソース</br>チャットクライアント</br></br>UNDER DEVELOPMENT</div>
+        </div>
       </div>
     </div>
     <script src="renderer.js"></script>

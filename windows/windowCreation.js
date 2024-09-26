@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 export function createLoginWindow() {
-  const loginWindow = new BrowserWindow({
+  global.loginWindow = new BrowserWindow({
     width: 600,
     height: 300,
     webPreferences: {
@@ -17,15 +17,15 @@ export function createLoginWindow() {
     icon: path.join(__dirname, '../resources', 'kichat.ico'),
   })
 
-  loginWindow.loadFile(path.join(__dirname, '../login.html'))
+  global.loginWindow.loadFile(path.join(__dirname, '../login.html'))
 
-  loginWindow.on('closed', () => {
+  global.loginWindow.on('closed', () => {
     global.loginWindow = null
   })
 
   Menu.setApplicationMenu(null)
 
-  return loginWindow
+  return global.loginWindow
 }
 
 export function createMainWindow() {

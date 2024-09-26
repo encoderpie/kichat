@@ -26,6 +26,9 @@ let mainWindow
 let loginWindow
 let isQuitting = false
 
+global.mainWindow = null
+global.loginWindow = null
+
 const server = setupExpressServer(store, app, createMainWindow, loginWindow)
 
 app.disableHardwareAcceleration()
@@ -53,15 +56,14 @@ function setupErrorHandling() {
 function initializeApp() {
   const cookies = store.get('cookies')
   if (!cookies) {
-    loginWindow = createLoginWindow()
+    global.loginWindow = createLoginWindow()
   } else {
-    mainWindow = createMainWindow()
+    global.mainWindow = createMainWindow()
   }
 
-  const pusher = setupPusher(mainWindow)
+  const pusher = setupPusher(global.mainWindow)
   setupIpcHandlers(
     ipcMain,
-    mainWindow,
     connectToChannels,
     disconnectFromChannel,
     sendMessageToChannel,

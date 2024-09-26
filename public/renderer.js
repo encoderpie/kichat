@@ -3,9 +3,9 @@ const { ipcRenderer } = require('electron')
 // Stil değişkenleri
 const FONT_SIZE = '14px'
 const EMOTE_SIZE = '26px'
-const BADGE_SIZE = '16px'
+const BADGE_SIZE = '17px'
 const USERNAME_FONT_SIZE = '14px'
-const TIMESTAMP_FONT_SIZE = '12px'
+const TIMESTAMP_FONT_SIZE = '13px'
 const MAX_MESSAGES = 500
 
 // Diğer değişkenler ve DOM elementleri
@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Ana sayfa sekmesi olayları
   const homeTabButton = document.getElementById('homeTabButton')
   const homeTabTextButton = document.getElementById('tab-home')
+
+  const logoutButton = document.getElementById('logoutButton')
+  logoutButton.addEventListener('click', () => {
+    ipcRenderer.send('logout')
+  })
 
   existingChannels.set('home', { tab_active: false })
   homeTabButton.addEventListener('click', () => {
@@ -114,10 +119,10 @@ ipcRenderer.on('message', (event, message) => {
     let messageReplyElementHTML = ''
     if (message.type == 'reply') {
       messageReplyElementHTML = `
-                <div class="opacity-60 flex items-center space-x-1">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.32004 4.41501H7.51004V1.29001L1.41504 5.66501L7.51004 10.04V6.91501H9.32004C10.805 6.91501 12.01 8.12501 12.01 9.60501C12.01 11.085 10.8 12.295 9.32004 12.295H4.46004V14.795H9.32004C12.185 14.795 14.51 12.465 14.51 9.60501C14.51 6.74501 12.18 4.41501 9.32004 4.41501Z" fill="currentColor"></path></svg>
-                    <span class="pe-1">@${message.metadata.original_sender.username}:</span>${message.metadata.original_message.content}
-                </div>`
+        <div class="opacity-50 flex items-center space-x-1 text-xs font-semibold" title="@${message.metadata.original_sender.username}: ${message.metadata.original_message.content}">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.32004 4.41501H7.51004V1.29001L1.41504 5.66501L7.51004 10.04V6.91501H9.32004C10.805 6.91501 12.01 8.12501 12.01 9.60501C12.01 11.085 10.8 12.295 9.32004 12.295H4.46004V14.795H9.32004C12.185 14.795 14.51 12.465 14.51 9.60501C14.51 6.74501 12.18 4.41501 9.32004 4.41501Z" fill="currentColor"></path></svg>
+          <span>@${message.metadata.original_sender.username}:</span><span class="truncate">${message.metadata.original_message.content}</span>
+        </div>`
     }
 
     const usernameHTML = `<span class="font-semibold text-[${message.sender.identity.color}]" style="font-size: ${USERNAME_FONT_SIZE};">${message.sender.username}:</span>`
@@ -162,7 +167,7 @@ ipcRenderer.on('message', (event, message) => {
             <div id="message-container" style="font-size: ${FONT_SIZE};">
                 ${messageReplyElementHTML}
                 <span class="flex items-center space-x-1 float-start me-1">
-                    ${localDateHTML} ${badgesHTML} ${usernameHTML}
+                    ${badgesHTML} ${usernameHTML}
                 </span>
                 <span class="static break-words">${renderMessage}</span>
             </div>`
@@ -430,7 +435,7 @@ function createChannelTab(channel) {
 
   let channelChatDiv = document.createElement('div')
   channelChatDiv.setAttribute('id', `chat-${channel}`)
-  channelChatDiv.className = 'w-full overflow-y-auto'
+  channelChatDiv.className = 'px-2 py-1 w-full overflow-y-auto'
   channelChatDiv.setAttribute('data-auto-scroll', 'true')
 
   const scrollDownButton = document.createElement('button')
@@ -591,6 +596,10 @@ function removeOldMessages(channelChatDiv) {
     messages[0].remove() // Delete the message at the top
   }
 }
+
+ipcRenderer.on('logout-success', () => {
+  window.location.href = 'login.html'
+})
 
 ipcRenderer.on('app-closing', () => {
   // Gerekli temizleme işlemlerini yapın

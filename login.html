@@ -34,7 +34,8 @@
           if (response.ok) {
             const data = await response.json()
             if (data.cookies) {
-              window.location.href = 'main.html'
+              // Store'da cookies varsa ana sayfaya yönlendir
+              window.location.href = 'index.html'
             }
           }
         } catch (error) {
@@ -42,7 +43,8 @@
         }
       }
 
-      setInterval(checkCookies, 3000) // Check every 3 seconds
+      // Sayfa yüklendiğinde bir kez kontrol et
+      checkCookies()
     </script>
   </body>
 </html>

@@ -1,11 +1,11 @@
 import { getChatroomId } from '../utils/channelUtils.js'
 import Store from 'electron-store'
+import { app } from 'electron'
 
 const store = new Store()
 
 export function setupIpcHandlers(
   ipcMain,
-  mainWindow,
   connectToChannels,
   disconnectFromChannel,
   sendMessageToChannel,
@@ -15,13 +15,21 @@ export function setupIpcHandlers(
     global.activeChannels = new Map()
   }
 
+  ipcMain.on('logout', () => {
+    store.clear() // Tüm store'u temizle
+    if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+      global.mainWindow.webContents.send('logout-success')
+    }
+    // Uygulamayı yeniden başlat
+    app.relaunch()
+    app.exit()
+  })
   ipcMain.on('app-closing', handleAppClosing(disconnectFromChannel, pusher))
   ipcMain.on(
     'connect-channels',
     handleConnectChannels(
       connectToChannels,
       disconnectFromChannel,
-      mainWindow,
       pusher
     )
   )
@@ -54,7 +62,6 @@ async function disconnectAllChannels(disconnectFromChannel, pusher) {
 function handleConnectChannels(
   connectToChannels,
   disconnectFromChannel,
-  mainWindow,
   pusher
 ) {
   return async (event, channels) => {
@@ -68,12 +75,13 @@ function handleConnectChannels(
       await connectAllChannels(
         [...reconnectChannels, ...newChannels],
         connectToChannels,
-        mainWindow,
         pusher
       )
     } catch (error) {
       console.error('Error in connect-channels:', error)
-      event.reply('connect-channels-error', error.message)
+      if (global.mainWindow && !global.mainWindow.isDestroyed()) {
+        global.mainWindow.webContents.send('connect-channels-error', error.message)
+      }
     }
   }
 }
@@ -108,7 +116,6 @@ async function disconnectReconnectChannels(
 async function connectAllChannels(
   allChannels,
   connectToChannels,
-  mainWindow,
   pusher
 ) {
   if (allChannels.length > 0) {
@@ -119,7 +126,6 @@ async function connectAllChannels(
     ])
     await connectToChannels(
       channelPairs,
-      mainWindow,
       global.activeChannels,
       pusher
     )
